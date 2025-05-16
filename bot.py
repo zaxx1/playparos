@@ -515,8 +515,6 @@ class PharosTestnet:
 
                     receiver, tx_hash, block_number = await self.perform_transfer(account, address, amount)
                     if receiver and tx_hash and block_number:
-                        explorer = f"https://testnet.pharosscan.xyz/tx/{tx_hash}"
-
                         self.log(
                             f"{Fore.CYAN+Style.BRIGHT}      Receiver:{Style.RESET_ALL}"
                             f"{Fore.WHITE+Style.BRIGHT} {receiver} {Style.RESET_ALL}"
@@ -533,16 +531,16 @@ class PharosTestnet:
                             f"{Fore.CYAN+Style.BRIGHT}      Tx hash :{Style.RESET_ALL}"
                             f"{Fore.WHITE+Style.BRIGHT} {tx_hash} {Style.RESET_ALL}"
                         )
-                        self.log(
-                            f"{Fore.CYAN+Style.BRIGHT}      Explore :{Style.RESET_ALL}"
-                            f"{Fore.WHITE+Style.BRIGHT} {explorer} {Style.RESET_ALL}"
-                        )
 
                         send = await self.send_to_friends(address, token, tx_hash, proxy)
                         if send and send.get("msg") == "task verified successfully":
+                            explorer = f"https://testnet.pharosscan.xyz/tx/{tx_hash}"
+                            
                             self.log(
                                 f"{Fore.CYAN+Style.BRIGHT}      Status  :{Style.RESET_ALL}"
                                 f"{Fore.GREEN+Style.BRIGHT} Transfer Verified Successfully {Style.RESET_ALL}"
+                                f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+                                f"{Fore.WHITE+Style.BRIGHT} {explorer} {Style.RESET_ALL}"
                             )   
                         else:
                             self.log(
