@@ -523,7 +523,7 @@ class PharosTestnet:
                         )
                         self.log(
                             f"{Fore.CYAN+Style.BRIGHT}      Amount  :{Style.RESET_ALL}"
-                            f"{Fore.WHITE+Style.BRIGHT} 0.001 PHRS {Style.RESET_ALL}"
+                            f"{Fore.WHITE+Style.BRIGHT} {amount} PHRS {Style.RESET_ALL}"
                         )
                         self.log(
                             f"{Fore.CYAN+Style.BRIGHT}      Block   :{Style.RESET_ALL}"
