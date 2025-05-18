@@ -233,6 +233,7 @@ class PharosTestnet:
         try:
             if contract_address == "PHRS":
                 balance = web3.eth.get_balance(address)
+                decimals = 18
             else:
                 token_contract = web3.eth.contract(address=Web3.to_checksum_address(contract_address), abi=self.ERC20_CONTRACT_ABI)
                 decimals = token_contract.functions.decimals().call()
