@@ -1024,7 +1024,7 @@ class PharosTestnet:
                         to_contract_address = self.USDC_CONTRACT_ADDRESS if swap_option == "WPHRStoUSDC" else self.WPHRS_CONTRACT_ADDRESS
                         from_token = "WPHRS" if swap_option == "WPHRStoUSDC" else "USDC"
                         to_token = "USDC" if swap_option == "WPHRStoUSDC" else "WPHRS"
-                        swap_amount = 0.005 if swap_option == "WPHRStoUSDC" else 2
+                        swap_amount = 0.005 if swap_option == "WPHRStoUSDC" else 1.5
 
                         self.log(
                             f"{Fore.CYAN+Style.BRIGHT}     Type    :{Style.RESET_ALL}"
@@ -1050,6 +1050,8 @@ class PharosTestnet:
 
                         await self.process_perform_swap(account, address, from_contract_address, to_contract_address, from_token, to_token, swap_amount)
                         await self.print_timer()
+
+                    await asyncio.sleep(2)
 
     async def main(self):
         try:
