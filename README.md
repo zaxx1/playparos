@@ -16,7 +16,7 @@ Pharos Testnet BOT
   - Auto Claim Faucet
   - Auto Make Transfer to Random Address
   - Auto Wrapped - Unwrapped PHRS/WPHRS
-  - Auto Swap WPHRS to USDC - USDC to WPHRS
+  - Auto Swap WPHRS, USDC, USDT
   - Multi Accounts
 
 ### Note: Other features will be update soon.

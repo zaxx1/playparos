@@ -26,9 +26,9 @@ class PharosTestnet:
         }
         self.BASE_API = "https://api.pharosnetwork.xyz"
         self.RPC_URL = "https://testnet.dplabs-internal.com"
-        self.PHRS_CONTRACT_ADDRESS = "0xf6a07fe10e28a70d1b0f36c7eb7745d2bae2a312"
         self.WPHRS_CONTRACT_ADDRESS = "0x76aaada469d23216be5f7c596fa25f282ff9b364"
         self.USDC_CONTRACT_ADDRESS = "0xad902cf99c2de2f1ba5ec4d642fd7e49cae9ee37"
+        self.USDT_CONTRACT_ADDRESS = "0xed59de2d7ad9c043442e381231ee3646fc3c2939"
         self.SWAP_ROUTER_ADDRESS = "0x1a4de519154ae51200b0ad7c90f7fac75547888a"
         self.ERC20_CONTRACT_ABI = [
             {
@@ -463,15 +463,15 @@ class PharosTestnet:
                 print(f"{Fore.GREEN + Style.BRIGHT}Select Option:{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}1. Check-In, Claim Faucet, and Send to Friends{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}2. Wrapped PHRS to WPHRS - Unwrapped WPHRS to PHRS{Style.RESET_ALL}")
-                print(f"{Fore.WHITE + Style.BRIGHT}3. Swap WPHRS to USDC - USDC to WPHRS{Style.RESET_ALL}")
+                print(f"{Fore.WHITE + Style.BRIGHT}3. Swap WPHRS, USDC, USDT{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}4. Run All Features{Style.RESET_ALL}")
                 option = int(input(f"{Fore.BLUE + Style.BRIGHT}Choose [1/2/3/4] -> {Style.RESET_ALL}").strip())
 
                 if option in [1, 2, 3, 4]:
                     option_type = (
                         "Check-In, Claim Faucet, and Send to Friends" if option == 1 else 
-                        "Wrapped PHRS to WPHRS" if option == 2 else 
-                        "Swap WPHRS to USDC - USDC to WPHRS" if option == 3 else
+                        "Wrapped PHRS to WPHRS - Unwrapped WPHRS to PHRS" if option == 2 else 
+                        "Swap WPHRS, USDC, USDT" if option == 3 else
                         "Run All Features"
                     )
                     print(f"{Fore.GREEN + Style.BRIGHT}{option_type} Selected.{Style.RESET_ALL}")
@@ -1059,7 +1059,7 @@ class PharosTestnet:
                     f"{Fore.WHITE+Style.BRIGHT} {receiver} {Style.RESET_ALL}"
                 )
 
-                if balance <= tx_amount * 1.2:
+                if balance <= tx_amount:
                     self.log(
                         f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
                         f"{Fore.YELLOW+Style.BRIGHT} Insufficient PHRS balance {Style.RESET_ALL}"
@@ -1103,7 +1103,7 @@ class PharosTestnet:
                 f"{Fore.WHITE+Style.BRIGHT} {wrap_amount} WPHRS {Style.RESET_ALL}"
             )
 
-            if balance <= wrap_amount * 1.2:
+            if balance <= wrap_amount:
                 self.log(
                     f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
                     f"{Fore.YELLOW+Style.BRIGHT} Insufficient WPHRS balance {Style.RESET_ALL}"
@@ -1120,12 +1120,31 @@ class PharosTestnet:
                 f"{Fore.GREEN+Style.BRIGHT}Swap{Style.RESET_ALL}"
                 f"{Fore.WHITE+Style.BRIGHT} {i+1} / {swap_count} {Style.RESET_ALL}                           "
             )
-            for swap_option in ["WPHRStoUSDC", "USDCtoWPHRS"]:
-                from_contract_address = self.WPHRS_CONTRACT_ADDRESS if swap_option == "WPHRStoUSDC" else self.USDC_CONTRACT_ADDRESS
-                to_contract_address = self.USDC_CONTRACT_ADDRESS if swap_option == "WPHRStoUSDC" else self.WPHRS_CONTRACT_ADDRESS
-                from_token = "WPHRS" if swap_option == "WPHRStoUSDC" else "USDC"
-                to_token = "USDC" if swap_option == "WPHRStoUSDC" else "WPHRS"
-                swap_amount = 0.005 if swap_option == "WPHRStoUSDC" else 1
+            for swap_option in ["WPHRStoUSDC", "WPHRStoUSDT", "USDCtoWPHRS", "USDCtoUSDT", "USDTtoWPHRS", "USDTtoUSDC"]:
+                from_contract_address = (
+                    self.WPHRS_CONTRACT_ADDRESS if swap_option in ["WPHRStoUSDC", "WPHRStoUSDT"] else 
+                    self.USDC_CONTRACT_ADDRESS if swap_option in ["USDCtoWPHRS", "USDCtoUSDT"] else
+                    self.USDT_CONTRACT_ADDRESS
+                )
+                to_contract_address = (
+                    self.WPHRS_CONTRACT_ADDRESS if swap_option in ["USDCtoWPHRS", "USDTtoWPHRS"] else 
+                    self.USDC_CONTRACT_ADDRESS if swap_option in ["WPHRStoUSDC", "USDTtoUSDC"] else
+                    self.USDT_CONTRACT_ADDRESS
+                )
+                from_token = (
+                    "WPHRS" if swap_option in ["WPHRStoUSDC", "WPHRStoUSDT"] else 
+                    "USDC" if swap_option in ["USDCtoWPHRS", "USDCtoUSDT"] else
+                    "USDT"
+                )
+                to_token = (
+                    "WPHRS" if swap_option in ["USDCtoWPHRS", "USDTtoWPHRS"] else 
+                    "USDC" if swap_option in ["WPHRStoUSDC", "USDTtoUSDC"] else
+                    "USDT"
+                )
+                swap_amount = (
+                    0.005 if swap_option in ["WPHRStoUSDC", "WPHRStoUSDT"] else
+                    1 if swap_option in ["USDCtoWPHRS", "USDCtoUSDT"] else 0.5
+                )
 
                 self.log(
                     f"{Fore.CYAN+Style.BRIGHT}     Type    :{Style.RESET_ALL}"
@@ -1142,12 +1161,12 @@ class PharosTestnet:
                     f"{Fore.WHITE+Style.BRIGHT} {swap_amount} {from_token} {Style.RESET_ALL}"
                 )
 
-                if balance <= swap_amount * 1.2:
+                if balance <= swap_amount:
                     self.log(
                         f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
                         f"{Fore.YELLOW+Style.BRIGHT} Insufficient {from_token} balance {Style.RESET_ALL}"
                     )
-                    break
+                    continue
 
                 await self.process_perform_swap(account, address, from_contract_address, to_contract_address, from_token, to_token, swap_amount)
                 await self.print_timer(15, 20)
@@ -1178,7 +1197,7 @@ class PharosTestnet:
             elif option == 3:
                 self.log(
                     f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
-                    f"{Fore.BLUE+Style.BRIGHT} Swap WPHRS to USDC - USDC to WPHRS {Style.RESET_ALL}"
+                    f"{Fore.BLUE+Style.BRIGHT} Swap WPHRS, USDC, USDT  {Style.RESET_ALL}"
                 )
 
                 await self.process_option_3(account, address, swap_count)
