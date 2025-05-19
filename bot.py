@@ -1120,7 +1120,7 @@ class PharosTestnet:
                 f"{Fore.GREEN+Style.BRIGHT}Swap{Style.RESET_ALL}"
                 f"{Fore.WHITE+Style.BRIGHT} {i+1} / {swap_count} {Style.RESET_ALL}                           "
             )
-            for swap_option in ["WPHRStoUSDC", "WPHRStoUSDT", "USDCtoWPHRS", "USDCtoUSDT", "USDTtoWPHRS", "USDTtoUSDC"]:
+            for swap_option in ["WPHRStoUSDC", "WPHRStoUSDT", "USDCtoWPHRS", "USDTtoWPHRS", "USDCtoUSDT", "USDTtoUSDC"]:
                 from_contract_address = (
                     self.WPHRS_CONTRACT_ADDRESS if swap_option in ["WPHRStoUSDC", "WPHRStoUSDT"] else 
                     self.USDC_CONTRACT_ADDRESS if swap_option in ["USDCtoWPHRS", "USDCtoUSDT"] else
@@ -1142,8 +1142,8 @@ class PharosTestnet:
                     "USDT"
                 )
                 swap_amount = (
-                    0.005 if swap_option in ["WPHRStoUSDC", "WPHRStoUSDT"] else
-                    1 if swap_option in ["USDCtoWPHRS", "USDCtoUSDT"] else 0.5
+                    0.05 if swap_option in ["WPHRStoUSDC", "WPHRStoUSDT"] else
+                    0.5 if swap_option in ["USDCtoWPHRS", "USDCtoUSDT"] else 0.1
                 )
 
                 self.log(
