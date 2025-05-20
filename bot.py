@@ -22,7 +22,7 @@ class PharosTestnet:
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-site",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+            "User-Agent": FakeUserAgent().random
         }
         self.BASE_API = "https://api.pharosnetwork.xyz"
         self.RPC_URL = "https://testnet.dplabs-internal.com"
@@ -682,7 +682,11 @@ class PharosTestnet:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
                     async with session.get(url=url, headers=headers) as response:
                         response.raise_for_status()
-                        return await response.json()
+                        result = await response.json()
+                        if "code" in result and result["code"] != 0:
+                            await asyncio.sleep(5)
+                            continue
+                        return result
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
                     await asyncio.sleep(5)
@@ -703,7 +707,11 @@ class PharosTestnet:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
                     async with session.post(url=url, headers=headers) as response:
                         response.raise_for_status()
-                        return await response.json()
+                        result = await response.json()
+                        if "code" in result and result["code"] not in [0, 1]:
+                            await asyncio.sleep(5)
+                            continue
+                        return result
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
                     await asyncio.sleep(5)
@@ -723,7 +731,11 @@ class PharosTestnet:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
                     async with session.get(url=url, headers=headers) as response:
                         response.raise_for_status()
-                        return await response.json()
+                        result = await response.json()
+                        if "code" in result and result["code"] != 0:
+                            await asyncio.sleep(5)
+                            continue
+                        return result
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
                     await asyncio.sleep(5)
@@ -744,7 +756,11 @@ class PharosTestnet:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
                     async with session.post(url=url, headers=headers) as response:
                         response.raise_for_status()
-                        return await response.json()
+                        result = await response.json()
+                        if "code" in result and result["code"] not in [0, 1]:
+                            await asyncio.sleep(5)
+                            continue
+                        return result
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
                     await asyncio.sleep(5)
@@ -766,7 +782,7 @@ class PharosTestnet:
                     async with session.post(url=url, headers=headers) as response:
                         response.raise_for_status()
                         result = await response.json()
-                        if "msg" in result and result["msg"] != "task verified successfully":
+                        if "code" in result and result["code"] != 0:
                             await asyncio.sleep(5)
                             continue
                         return result
@@ -1021,6 +1037,13 @@ class PharosTestnet:
                             f"{Fore.WHITE+Style.BRIGHT} 0.2 PHRS {Style.RESET_ALL}"
                             f"{Fore.GREEN+Style.BRIGHT}Claimed Successfully{Style.RESET_ALL}"
                         )
+                    elif claim and claim.get("msg") == "user has not bound X account":
+                        self.log(
+                            f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}"
+                            f"{Fore.RED+Style.BRIGHT} Not Eligible to Claim {Style.RESET_ALL}"
+                            f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+                            f"{Fore.YELLOW+Style.BRIGHT} Bind X Account First {Style.RESET_ALL}"
+                        )
                     else:
                         self.log(
                             f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}"
@@ -1088,7 +1111,7 @@ class PharosTestnet:
                 f"{Fore.WHITE+Style.BRIGHT} {wrap_amount} PHRS {Style.RESET_ALL}"
             )
 
-            if balance <= wrap_amount * 1.2:
+            if balance <= wrap_amount:
                 self.log(
                     f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
                     f"{Fore.YELLOW+Style.BRIGHT} Insufficient PHRS balance {Style.RESET_ALL}"
