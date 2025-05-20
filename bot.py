@@ -1238,13 +1238,13 @@ class PharosTestnet:
                 )
 
                 await self.process_option_1(account, address, url_login, tx_count, tx_amount, use_proxy)
-                await asyncio.sleep(3)
+                await asyncio.sleep(5)
 
                 await self.process_option_2(account, address, wrap_option, wrap_amount)
-                await asyncio.sleep(3)
+                await asyncio.sleep(5)
 
                 await self.process_option_3(account, address, swap_count)
-                await asyncio.sleep(3)
+                await asyncio.sleep(5)
 
     async def main(self):
         try:
