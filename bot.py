@@ -654,6 +654,7 @@ class PharosTestnet:
             "Authorization": "Bearer null",
             "Content-Length": "0"
         }
+        await asyncio.sleep(3)
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
@@ -674,6 +675,7 @@ class PharosTestnet:
             **self.headers,
             "Authorization": f"Bearer {token}"
         }
+        await asyncio.sleep(3)
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
@@ -694,6 +696,7 @@ class PharosTestnet:
             "Authorization": f"Bearer {token}",
             "Content-Length": "0"
         }
+        await asyncio.sleep(3)
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
@@ -713,6 +716,7 @@ class PharosTestnet:
             **self.headers,
             "Authorization": f"Bearer {token}"
         }
+        await asyncio.sleep(3)
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
@@ -733,6 +737,7 @@ class PharosTestnet:
             "Authorization": f"Bearer {token}",
             "Content-Length": "0"
         }
+        await asyncio.sleep(3)
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
@@ -753,6 +758,7 @@ class PharosTestnet:
             "Authorization": f"Bearer {token}",
             "Content-Length": "0"
         }
+        await asyncio.sleep(3)
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
