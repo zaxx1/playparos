@@ -22,7 +22,7 @@ class PharosTestnet:
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-site",
-            "User-Agent": FakeUserAgent().random
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
         }
         self.BASE_API = "https://api.pharosnetwork.xyz"
         self.RPC_URL = "https://testnet.dplabs-internal.com"
@@ -1142,7 +1142,7 @@ class PharosTestnet:
                     "USDT"
                 )
                 swap_amount = (
-                    0.05 if swap_option in ["WPHRStoUSDC", "WPHRStoUSDT"] else
+                    0.005 if swap_option in ["WPHRStoUSDC", "WPHRStoUSDT"] else
                     0.5 if swap_option in ["USDCtoWPHRS", "USDCtoUSDT"] else 0.1
                 )
 
