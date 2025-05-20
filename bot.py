@@ -1100,7 +1100,7 @@ class PharosTestnet:
 
     async def process_option_2(self, account: str, address: str, wrap_option: int, wrap_amount: float):
         if wrap_option == 1:
-            self.log(f"{Fore.CYAN+Style.BRIGHT}Wrapped   :{Style.RESET_ALL}")
+            self.log(f"{Fore.CYAN+Style.BRIGHT}Wrapped   :{Style.RESET_ALL}                      ")
             balance = await self.get_token_balance(address, "PHRS")
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}     Balance :{Style.RESET_ALL}"
@@ -1121,7 +1121,7 @@ class PharosTestnet:
             await self.process_perform_wrapped(account, address, wrap_amount)
         
         elif wrap_option == 2:
-            self.log(f"{Fore.CYAN+Style.BRIGHT}Unwrapped :{Style.RESET_ALL}")
+            self.log(f"{Fore.CYAN+Style.BRIGHT}Unwrapped :{Style.RESET_ALL}                      ")
             balance = await self.get_token_balance(address, self.WPHRS_CONTRACT_ADDRESS)
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}     Balance :{Style.RESET_ALL}"
