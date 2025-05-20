@@ -40,6 +40,20 @@ Pharos Testnet BOT
    pip install -r requirements.txt #or pip3 install -r requirements.txt
    ```
 
+### Note: Check your web3, eth-account, eth-utils, and eth-abi library version first. If not same with version in requirements.txt, u must uninstall that library.
+- **Check Library Version**
+  ```bash
+    pip show libary_name
+  ```
+- **Uninstall Library**
+  ```bash
+    pip uninstall libary_name
+  ```
+- **Check Library Version**
+  ```bash
+    pip install libary_name
+  ```
+
 ## Configuration
 
 - **accounts.txt:** You will find the file `accounts.txt` inside the project directory. Make sure `accounts.txt` contains data that matches the format expected by the script. Here are examples of file formats:
