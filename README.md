@@ -13,10 +13,11 @@ Pharos Testnet BOT
   - Auto Run Without Proxy - `Choose 3`
   - Auto Rotate Invalid Proxies - `y` or `n`
   - Auto Claim Daily Check-In
-  - Auto Claim Faucet
+  - Auto Claim Faucet PHRS - USDC - USDT
   - Auto Make Transfer to Random Address
   - Auto Wrapped - Unwrapped PHRS/WPHRS
-  - Auto Swap WPHRS, USDC, USDT
+  - Auto Add LP WPHRS/USDC - WPHRS/USDT
+  - Auto Swap WPHRS - USDC - USDT
   - Multi Accounts
 
 ### Note: Other features will be update soon.
@@ -49,9 +50,9 @@ Pharos Testnet BOT
   ```bash
     pip uninstall libary_name
   ```
-- **Check Library Version**
+- **Install Library With Version**
   ```bash
-    pip install libary_name
+    pip install libary_name==version
   ```
 
 ## Configuration
