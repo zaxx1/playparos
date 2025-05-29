@@ -103,6 +103,18 @@ class PharosTestnet:
         self.proxy_index = 0
         self.account_proxies = {}
         self.signatures = {}
+        self.access_tokens = {}
+        self.tx_count = 0
+        self.tx_amount = 0
+        self.wrap_option = None
+        self.wrap_amount = 0
+        self.add_lp_count = 0
+        self.swap_count = 0
+        self.wphrs_amount = 0
+        self.usdc_amount = 0
+        self.usdt_amount = 0
+        self.min_delay = 0
+        self.max_delay = 0
 
     def clear_terminal(self):
         os.system('cls' if os.name == 'nt' else 'clear')
@@ -213,7 +225,7 @@ class PharosTestnet:
         except Exception as e:
             raise Exception(f"Generate Signature From Private Key Failed: {str(e)}")
         
-    def generate_swap_option(self, wphrs_amount: float, usdc_amount: float, usdt_amount: float):
+    def generate_swap_option(self):
         swap_option = random.choice([
             "WPHRStoUSDC", "WPHRStoUSDT", "USDCtoWPHRS",
             "USDTtoWPHRS", "USDCtoUSDT", "USDTtoUSDC"
@@ -244,9 +256,9 @@ class PharosTestnet:
         )
 
         swap_amount = (
-            usdc_amount if swap_option in ["USDCtoWPHRS", "USDCtoUSDT"] else
-            usdt_amount if swap_option in ["USDTtoWPHRS", "USDTtoUSDC"] else
-            wphrs_amount
+            self.usdc_amount if swap_option in ["USDCtoWPHRS", "USDCtoUSDT"] else
+            self.usdt_amount if swap_option in ["USDTtoWPHRS", "USDTtoUSDC"] else
+            self.wphrs_amount
         )
 
         return from_contract_address, to_contract_address, from_token, to_token, swap_amount
@@ -321,11 +333,11 @@ class PharosTestnet:
             )
             return None, None
         
-    async def perform_transfer(self, account: str, address: str, receiver: str, amount: float):
+    async def perform_transfer(self, account: str, address: str, receiver: str):
         try:
             web3 = await self.get_web3_with_check()
             
-            amount_to_wei = web3.to_wei(amount, "ether")
+            amount_to_wei = web3.to_wei(self.tx_amount, "ether")
             max_priority_fee = web3.to_wei(1, "gwei")
             max_fee = max_priority_fee
 
@@ -353,14 +365,14 @@ class PharosTestnet:
             )
             return None, None
         
-    async def perform_wrapped(self, account: str, address: str, amount: float):
+    async def perform_wrapped(self, account: str, address: str):
         try:
             web3 = await self.get_web3_with_check()
 
             contract_address = web3.to_checksum_address(self.WPHRS_CONTRACT_ADDRESS)
             token_contract = web3.eth.contract(address=contract_address, abi=self.ERC20_CONTRACT_ABI)
 
-            amount_to_wei = web3.to_wei(amount, "ether")
+            amount_to_wei = web3.to_wei(self.wrap_amount, "ether")
             wrap_data = token_contract.functions.deposit()
             estimated_gas = wrap_data.estimate_gas({"from": address, "value": amount_to_wei})
 
@@ -391,14 +403,14 @@ class PharosTestnet:
             )
             return None, None
         
-    async def perform_unwrapped(self, account: str, address: str, amount: float):
+    async def perform_unwrapped(self, account: str, address: str):
         try:
             web3 = await self.get_web3_with_check()
 
             contract_address = web3.to_checksum_address(self.WPHRS_CONTRACT_ADDRESS)
             token_contract = web3.eth.contract(address=contract_address, abi=self.ERC20_CONTRACT_ABI)
 
-            amount_to_wei = web3.to_wei(amount, "ether")
+            amount_to_wei = web3.to_wei(self.wrap_amount, "ether")
             unwrap_data = token_contract.functions.withdraw(amount_to_wei)
             estimated_gas = unwrap_data.estimate_gas({"from": address})
 
@@ -587,8 +599,8 @@ class PharosTestnet:
         except Exception as e:
             return None
     
-    async def print_timer(self, min_delay: int, max_delay: int):
-        for remaining in range(random.randint(min_delay, max_delay), 0, -1):
+    async def print_timer(self):
+        for remaining in range(random.randint(self.min_delay, self.max_delay), 0, -1):
             print(
                 f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
                 f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
@@ -601,7 +613,6 @@ class PharosTestnet:
             await asyncio.sleep(1)
 
     def print_question(self):
-        mint = False
         tx_count = 0
         tx_amount = 0
         wrap_option = None
@@ -611,12 +622,14 @@ class PharosTestnet:
         wphrs_amount = 0
         usdc_amount = 0
         usdt_amount = 0
+        min_delay = 0
+        max_delay = 0
         rotate = False
 
         while True:
             try:
                 print(f"{Fore.GREEN + Style.BRIGHT}Select Option:{Style.RESET_ALL}")
-                print(f"{Fore.WHITE + Style.BRIGHT}1. Check-In - Claim n Mint Faucet{Style.RESET_ALL}")
+                print(f"{Fore.WHITE + Style.BRIGHT}1. Check-In - Claim PHRS Faucet{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}2. Send To Friends{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}3. Wrapped - Unwrapped{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}4. Add Liquidity Pool{Style.RESET_ALL}")
@@ -626,7 +639,7 @@ class PharosTestnet:
 
                 if option in [1, 2, 3, 4, 5, 6]:
                     option_type = (
-                        "Check-In - Claim n Mint Faucet" if option == 1 else 
+                        "Check-In - Claim PHRS Faucet" if option == 1 else 
                         "Send To Friends" if option == 2 else 
                         "Wrapped - Unwrapped" if option == 3 else
                         "Add Liquidity Pool" if option == 4 else
@@ -640,21 +653,12 @@ class PharosTestnet:
             except ValueError:
                 print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number (1, 2, 3, 4, 5 or 6).{Style.RESET_ALL}")
 
-        if option == 1:
-            while True:
-                mint = input(f"{Fore.BLUE + Style.BRIGHT}Mint USDC & USDT Faucet? [y/n] -> {Style.RESET_ALL}").strip()
-
-                if mint in ["y", "n"]:
-                    mint = mint == "y"
-                    break
-                else:
-                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter 'y' or 'n'.{Style.RESET_ALL}")
-
         if option == 2:
             while True:
                 try:
                     tx_count = int(input(f"{Fore.YELLOW + Style.BRIGHT}How Many Times Do You Want To Make a Transfer? -> {Style.RESET_ALL}").strip())
                     if tx_count > 0:
+                        self.tx_count = tx_count
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Please enter positive number.{Style.RESET_ALL}")
@@ -665,11 +669,34 @@ class PharosTestnet:
                 try:
                     tx_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}Enter Amount for Each Transfers [1 or 0.01 or 0.001, etc in decimals] -> {Style.RESET_ALL}").strip())
                     if tx_amount > 0:
+                        self.tx_amount = tx_amount
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Amount must be greater than 0.{Style.RESET_ALL}")
                 except ValueError:
                     print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a float or decimal number.{Style.RESET_ALL}")
+
+            while True:
+                try:
+                    min_delay = int(input(f"{Fore.YELLOW + Style.BRIGHT}Min Delay Each Tx -> {Style.RESET_ALL}").strip())
+                    if min_delay >= 0:
+                        self.min_delay = min_delay
+                        break
+                    else:
+                        print(f"{Fore.RED + Style.BRIGHT}Min Delay must be >= 0.{Style.RESET_ALL}")
+                except ValueError:
+                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+            while True:
+                try:
+                    max_delay = int(input(f"{Fore.YELLOW + Style.BRIGHT}Max Delay Each Tx -> {Style.RESET_ALL}").strip())
+                    if max_delay >= min_delay:
+                        self.max_delay = max_delay
+                        break
+                    else:
+                        print(f"{Fore.RED + Style.BRIGHT}Min Delay must be >= Min Delay.{Style.RESET_ALL}")
+                except ValueError:
+                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
 
         elif option == 3:
             while True:
@@ -685,6 +712,7 @@ class PharosTestnet:
                             "Unwrapped WPHRS to PHRS"
                         )
                         print(f"{Fore.GREEN + Style.BRIGHT}{wrap_type} Selected.{Style.RESET_ALL}")
+                        self.wrap_option = wrap_option
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Please enter either 1 or 2.{Style.RESET_ALL}")
@@ -695,6 +723,7 @@ class PharosTestnet:
                 try:
                     wrap_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}Enter Amount [1 or 0.01 or 0.001, etc in decimals] -> {Style.RESET_ALL}").strip())
                     if wrap_amount > 0:
+                        self.wrap_amount = wrap_amount
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Amount must be greater than 0.{Style.RESET_ALL}")
@@ -706,9 +735,32 @@ class PharosTestnet:
                 try:
                     add_lp_count = int(input(f"{Fore.YELLOW + Style.BRIGHT}How Many Times Do You Want To Add Liquidity Pool? -> {Style.RESET_ALL}").strip())
                     if add_lp_count > 0:
+                        self.add_lp_count = add_lp_count
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Please enter positive number.{Style.RESET_ALL}")
+                except ValueError:
+                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+            while True:
+                try:
+                    min_delay = int(input(f"{Fore.YELLOW + Style.BRIGHT}Min Delay Each Tx -> {Style.RESET_ALL}").strip())
+                    if min_delay >= 0:
+                        self.min_delay = min_delay
+                        break
+                    else:
+                        print(f"{Fore.RED + Style.BRIGHT}Min Delay must be >= 0.{Style.RESET_ALL}")
+                except ValueError:
+                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+            while True:
+                try:
+                    max_delay = int(input(f"{Fore.YELLOW + Style.BRIGHT}Max Delay Each Tx -> {Style.RESET_ALL}").strip())
+                    if max_delay >= min_delay:
+                        self.max_delay = max_delay
+                        break
+                    else:
+                        print(f"{Fore.RED + Style.BRIGHT}Min Delay must be >= Min Delay.{Style.RESET_ALL}")
                 except ValueError:
                     print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
 
@@ -717,6 +769,7 @@ class PharosTestnet:
                 try:
                     swap_count = int(input(f"{Fore.YELLOW + Style.BRIGHT}How Many Times Do You Want To Make a Swap? -> {Style.RESET_ALL}").strip())
                     if swap_count > 0:
+                        self.swap_count = swap_count
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Please enter positive number.{Style.RESET_ALL}")
@@ -725,8 +778,9 @@ class PharosTestnet:
 
             while True:
                 try:
-                    wphrs_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}WPHRS Swap Amount? [1 or 0.01 or 0.001, etc in decimals]-> {Style.RESET_ALL}").strip())
+                    wphrs_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}WPHRS Swap Amount? [1 or 0.01 or 0.001, etc in decimals] -> {Style.RESET_ALL}").strip())
                     if wphrs_amount > 0:
+                        self.wphrs_amount = wphrs_amount
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Amount must be greater than 0.{Style.RESET_ALL}")
@@ -735,8 +789,9 @@ class PharosTestnet:
 
             while True:
                 try:
-                    usdc_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}USDC Swap Amount? [1 or 0.01 or 0.001, etc in decimals]-> {Style.RESET_ALL}").strip())
+                    usdc_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}USDC Swap Amount? [1 or 0.01 or 0.001, etc in decimals] -> {Style.RESET_ALL}").strip())
                     if usdc_amount > 0:
+                        self.usdc_amount = usdc_amount
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Amount must be greater than 0.{Style.RESET_ALL}")
@@ -745,28 +800,43 @@ class PharosTestnet:
 
             while True:
                 try:
-                    usdt_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}USDT Swap Amount? [1 or 0.01 or 0.001, etc in decimals]-> {Style.RESET_ALL}").strip())
+                    usdt_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}USDT Swap Amount? [1 or 0.01 or 0.001, etc in decimals] -> {Style.RESET_ALL}").strip())
                     if usdt_amount > 0:
+                        self.usdt_amount = usdt_amount
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Amount must be greater than 0.{Style.RESET_ALL}")
+                except ValueError:
+                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+            while True:
+                try:
+                    min_delay = int(input(f"{Fore.YELLOW + Style.BRIGHT}Min Delay Each Tx -> {Style.RESET_ALL}").strip())
+                    if min_delay >= 0:
+                        self.min_delay = min_delay
+                        break
+                    else:
+                        print(f"{Fore.RED + Style.BRIGHT}Min Delay must be >= 0.{Style.RESET_ALL}")
+                except ValueError:
+                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+            while True:
+                try:
+                    max_delay = int(input(f"{Fore.YELLOW + Style.BRIGHT}Max Delay Each Tx -> {Style.RESET_ALL}").strip())
+                    if max_delay >= min_delay:
+                        self.max_delay = max_delay
+                        break
+                    else:
+                        print(f"{Fore.RED + Style.BRIGHT}Min Delay must be >= Min Delay.{Style.RESET_ALL}")
                 except ValueError:
                     print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
 
         elif option == 6:
             while True:
-                mint = input(f"{Fore.BLUE + Style.BRIGHT}Mint USDC & USDT Faucet? [y/n] -> {Style.RESET_ALL}").strip()
-
-                if mint in ["y", "n"]:
-                    mint = mint == "y"
-                    break
-                else:
-                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter 'y' or 'n'.{Style.RESET_ALL}")
-
-            while True:
                 try:
                     tx_count = int(input(f"{Fore.YELLOW + Style.BRIGHT}How Many Times Do You Want To Make a Transfer? -> {Style.RESET_ALL}").strip())
                     if tx_count > 0:
+                        self.tx_count = tx_count
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Please enter positive number.{Style.RESET_ALL}")
@@ -777,6 +847,7 @@ class PharosTestnet:
                 try:
                     tx_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}Enter Amount for Each Transfers [1 or 0.01 or 0.001, etc in decimals] -> {Style.RESET_ALL}").strip())
                     if tx_amount > 0:
+                        self.tx_amount = tx_amount
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Amount must be greater than 0.{Style.RESET_ALL}")
@@ -798,6 +869,7 @@ class PharosTestnet:
                             "Skipped"
                         )
                         print(f"{Fore.GREEN + Style.BRIGHT}{wrap_type} Selected.{Style.RESET_ALL}")
+                        self.wrap_option = wrap_option
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Please enter either 1, 2, or 3.{Style.RESET_ALL}")
@@ -809,6 +881,7 @@ class PharosTestnet:
                     try:
                         wrap_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}Enter Amount [1 or 0.01 or 0.001, etc in decimals] -> {Style.RESET_ALL}").strip())
                         if wrap_amount > 0:
+                            self.wrap_amount = wrap_amount
                             break
                         else:
                             print(f"{Fore.RED + Style.BRIGHT}Amount must be greater than 0.{Style.RESET_ALL}")
@@ -819,6 +892,7 @@ class PharosTestnet:
                 try:
                     add_lp_count = int(input(f"{Fore.YELLOW + Style.BRIGHT}How Many Times Do You Want To Add Liquidity Pool? -> {Style.RESET_ALL}").strip())
                     if add_lp_count > 0:
+                        self.add_lp_count = add_lp_count
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Please enter positive number.{Style.RESET_ALL}")
@@ -829,6 +903,7 @@ class PharosTestnet:
                 try:
                     swap_count = int(input(f"{Fore.YELLOW + Style.BRIGHT}How Many Times Do You Want To Make a Swap? -> {Style.RESET_ALL}").strip())
                     if swap_count > 0:
+                        self.swap_count = swap_count
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Please enter positive number.{Style.RESET_ALL}")
@@ -837,8 +912,9 @@ class PharosTestnet:
 
             while True:
                 try:
-                    wphrs_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}WPHRS Swap Amount? [1 or 0.01 or 0.001, etc in decimals]-> {Style.RESET_ALL}").strip())
+                    wphrs_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}WPHRS Swap Amount? [1 or 0.01 or 0.001, etc in decimals] -> {Style.RESET_ALL}").strip())
                     if wphrs_amount > 0:
+                        self.wphrs_amount = wphrs_amount
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Amount must be greater than 0.{Style.RESET_ALL}")
@@ -847,8 +923,9 @@ class PharosTestnet:
 
             while True:
                 try:
-                    usdc_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}USDC Swap Amount? [1 or 0.01 or 0.001, etc in decimals]-> {Style.RESET_ALL}").strip())
+                    usdc_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}USDC Swap Amount? [1 or 0.01 or 0.001, etc in decimals] -> {Style.RESET_ALL}").strip())
                     if usdc_amount > 0:
+                        self.usdc_amount = usdc_amount
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Amount must be greater than 0.{Style.RESET_ALL}")
@@ -857,11 +934,34 @@ class PharosTestnet:
 
             while True:
                 try:
-                    usdt_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}USDT Swap Amount? [1 or 0.01 or 0.001, etc in decimals]-> {Style.RESET_ALL}").strip())
+                    usdt_amount = float(input(f"{Fore.YELLOW + Style.BRIGHT}USDT Swap Amount? [1 or 0.01 or 0.001, etc in decimals] -> {Style.RESET_ALL}").strip())
                     if usdt_amount > 0:
+                        self.usdt_amount = usdt_amount
                         break
                     else:
                         print(f"{Fore.RED + Style.BRIGHT}Amount must be greater than 0.{Style.RESET_ALL}")
+                except ValueError:
+                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+            while True:
+                try:
+                    min_delay = int(input(f"{Fore.YELLOW + Style.BRIGHT}Min Delay Each Tx -> {Style.RESET_ALL}").strip())
+                    if min_delay >= 0:
+                        self.min_delay = min_delay
+                        break
+                    else:
+                        print(f"{Fore.RED + Style.BRIGHT}Min Delay must be >= 0.{Style.RESET_ALL}")
+                except ValueError:
+                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+            while True:
+                try:
+                    max_delay = int(input(f"{Fore.YELLOW + Style.BRIGHT}Max Delay Each Tx -> {Style.RESET_ALL}").strip())
+                    if max_delay >= min_delay:
+                        self.max_delay = max_delay
+                        break
+                    else:
+                        print(f"{Fore.RED + Style.BRIGHT}Min Delay must be >= Min Delay.{Style.RESET_ALL}")
                 except ValueError:
                     print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
         
@@ -895,17 +995,7 @@ class PharosTestnet:
                 else:
                     print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter 'y' or 'n'.{Style.RESET_ALL}")
 
-        return option, mint, tx_count, tx_amount, wrap_option, wrap_amount, add_lp_count, swap_count, wphrs_amount, usdc_amount, usdt_amount, choose, rotate
-    
-    async def check_connection(self, proxy=None):
-        connector = ProxyConnector.from_url(proxy) if proxy else None
-        try:
-            async with ClientSession(connector=connector, timeout=ClientTimeout(total=30)) as session:
-                async with session.get(url="https://testnet.pharosnetwork.xyz", headers={}) as response:
-                    response.raise_for_status()
-                    return True
-        except (Exception, ClientResponseError) as e:
-            return None
+        return option, choose, rotate
     
     async def user_login(self, address: str, proxy=None, retries=5):
         url = f"{self.BASE_API}/user/login?address={address}&signature={self.signatures[address]}&invite_code={self.ref_code}"
@@ -929,11 +1019,11 @@ class PharosTestnet:
                     continue
                 return None
     
-    async def user_profile(self, address: str, token: str, proxy=None, retries=5):
+    async def user_profile(self, address: str, proxy=None, retries=5):
         url = f"{self.BASE_API}/user/profile?address={address}"
         headers = {
             **self.headers,
-            "Authorization": f"Bearer {token}"
+            "Authorization": f"Bearer {self.access_tokens[address]}"
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
@@ -953,11 +1043,11 @@ class PharosTestnet:
                     continue
                 return None
     
-    async def sign_in(self, address: str, token: str, proxy=None, retries=10):
+    async def sign_in(self, address: str, proxy=None, retries=10):
         url = f"{self.BASE_API}/sign/in?address={address}"
         headers = {
             **self.headers,
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {self.access_tokens[address]}",
             "Content-Length": "0"
         }
         await asyncio.sleep(3)
@@ -978,11 +1068,11 @@ class PharosTestnet:
                     continue
                 return None
     
-    async def phrs_faucet_status(self, address: str, token: str, proxy=None, retries=10):
+    async def faucet_status(self, address: str, proxy=None, retries=10):
         url = f"{self.BASE_API}/faucet/status?address={address}"
         headers = {
             **self.headers,
-            "Authorization": f"Bearer {token}"
+            "Authorization": f"Bearer {self.access_tokens[address]}"
         }
         await asyncio.sleep(3)
         for attempt in range(retries):
@@ -1002,11 +1092,11 @@ class PharosTestnet:
                     continue
                 return None
             
-    async def claim_faucet(self, address: str, token: str, proxy=None, retries=5):
+    async def claim_faucet(self, address: str, proxy=None, retries=5):
         url = f"{self.BASE_API}/faucet/daily?address={address}"
         headers = {
             **self.headers,
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {self.access_tokens[address]}",
             "Content-Length": "0"
         }
         await asyncio.sleep(3)
@@ -1027,11 +1117,11 @@ class PharosTestnet:
                     continue
                 return None
             
-    async def verify_task(self, address: str, token: str, task_id: str, tx_hash: str, proxy=None, retries=10):
-        url = f"{self.BASE_API}/task/verify?address={address}&task_id={task_id}&tx_hash={tx_hash}"
+    async def verify_task(self, address: str, tx_hash: str, proxy=None, retries=10):
+        url = f"{self.BASE_API}/task/verify?address={address}&task_id=103&tx_hash={tx_hash}"
         headers = {
             **self.headers,
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {self.access_tokens[address]}",
             "Content-Length": "0"
         }
         await asyncio.sleep(3)
@@ -1056,7 +1146,7 @@ class PharosTestnet:
                 )
                 return None
             
-    async def process_check_connection(self, address: str, use_proxy: bool, rotate_proxy: bool):
+    async def process_user_login(self, address: str, use_proxy: bool, rotate_proxy: bool):
         message = "Checking Connection, Wait..."
         if use_proxy:
             message = "Checking Proxy Connection, Wait..."
@@ -1072,10 +1162,9 @@ class PharosTestnet:
         proxy = self.get_next_proxy_for_account(address) if use_proxy else None
 
         if rotate_proxy:
-            is_valid = None
-            while is_valid is None:
-                is_valid = await self.check_connection(proxy)
-                if not is_valid:
+            while True:
+                token = self.user_login(address, proxy)
+                if not token:
                     self.log(
                         f"{Fore.CYAN+Style.BRIGHT}Proxy     :{Style.RESET_ALL}"
                         f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
@@ -1087,6 +1176,8 @@ class PharosTestnet:
                     await asyncio.sleep(5)
                     continue
 
+                self.access_tokens[address] = token
+
                 self.log(
                     f"{Fore.CYAN+Style.BRIGHT}Proxy     :{Style.RESET_ALL}"
                     f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
@@ -1095,8 +1186,8 @@ class PharosTestnet:
                 )
                 return True
 
-        is_valid = await self.check_connection(proxy)
-        if not is_valid:
+        token = await self.user_login(address, proxy)
+        if not token:
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}Proxy     :{Style.RESET_ALL}"
                 f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
@@ -1106,6 +1197,8 @@ class PharosTestnet:
             )
             return False
         
+        self.access_tokens[address] = token
+        
         self.log(
             f"{Fore.CYAN+Style.BRIGHT}Proxy     :{Style.RESET_ALL}"
             f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
@@ -1113,51 +1206,11 @@ class PharosTestnet:
             f"{Fore.GREEN+Style.BRIGHT} 200 OK {Style.RESET_ALL}                  "
         )
         return True
-        
-    async def process_user_login(self, address: str, use_proxy: bool):
+    
+    async def process_perform_transfer(self, account: str, address: str, receiver: str, use_proxy: bool):
         proxy = self.get_next_proxy_for_account(address) if use_proxy else None
 
-        token = await self.user_login(address, proxy)
-        if not token:
-            self.log(
-                f"{Fore.CYAN+Style.BRIGHT}Status    :{Style.RESET_ALL}"
-                f"{Fore.RED+Style.BRIGHT} Login Failed {Style.RESET_ALL}"
-            )
-            return
-        
-        return token
-    
-    async def process_perform_mint_faucet(self, account: str, address: str, asset_address: str, token_name: str):
-        tx_hash, block_number = await self.perform_mint_faucet(account, address, asset_address)
-        if tx_hash and block_number:
-            explorer = f"https://testnet.pharosscan.xyz/tx/{tx_hash}"
-
-            self.log(
-                f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
-                f"{Fore.GREEN+Style.BRIGHT} Mint 1000 {token_name} Faucet Success {Style.RESET_ALL}"
-            )
-            self.log(
-                f"{Fore.CYAN+Style.BRIGHT}     Block   :{Style.RESET_ALL}"
-                f"{Fore.WHITE+Style.BRIGHT} {block_number} {Style.RESET_ALL}"
-            )
-            self.log(
-                f"{Fore.CYAN+Style.BRIGHT}     Tx Hash :{Style.RESET_ALL}"
-                f"{Fore.WHITE+Style.BRIGHT} {tx_hash} {Style.RESET_ALL}"
-            )
-            self.log(
-                f"{Fore.CYAN+Style.BRIGHT}     Explorer:{Style.RESET_ALL}"
-                f"{Fore.WHITE+Style.BRIGHT} {explorer} {Style.RESET_ALL}"
-            )
-        else:
-            self.log(
-                f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
-                f"{Fore.RED+Style.BRIGHT} Perform On-Chain Failed {Style.RESET_ALL}"
-            )
-    
-    async def process_perform_transfer(self, account: str, address: str, token: str, receiver: str, tx_amount: float, use_proxy: bool):
-        proxy = self.get_next_proxy_for_account(address) if use_proxy else None
-
-        tx_hash, block_number = await self.perform_transfer(account, address, receiver, tx_amount)
+        tx_hash, block_number = await self.perform_transfer(account, address, receiver)
         if tx_hash and block_number:
             explorer = f"https://testnet.pharosscan.xyz/tx/{tx_hash}"
             self.log(
@@ -1186,7 +1239,7 @@ class PharosTestnet:
             )
             await asyncio.sleep(5)
 
-            verify = await self.verify_task(address, token, "103", tx_hash, proxy)
+            verify = await self.verify_task(address, tx_hash, proxy)
             if verify and verify.get("code") == 0:
                 self.log(
                     f"{Fore.CYAN+Style.BRIGHT}     Verify  :{Style.RESET_ALL}"
@@ -1203,13 +1256,13 @@ class PharosTestnet:
                 f"{Fore.RED+Style.BRIGHT} Perform On-Chain Failed {Style.RESET_ALL}"
             )
 
-    async def process_perform_wrapped(self, account: str, address: str, wrap_amount: float):
-        tx_hash, block_number = await self.perform_wrapped(account, address, wrap_amount)
+    async def process_perform_wrapped(self, account: str, address: str):
+        tx_hash, block_number = await self.perform_wrapped(account, address)
         if tx_hash and block_number:
             explorer = f"https://testnet.pharosscan.xyz/tx/{tx_hash}"
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
-                f"{Fore.GREEN+Style.BRIGHT} Wrapped {wrap_amount} PHRS to WPHRS Success {Style.RESET_ALL}"
+                f"{Fore.GREEN+Style.BRIGHT} Wrapped {self.wrap_amount} PHRS to WPHRS Success {Style.RESET_ALL}"
             )
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}     Block   :{Style.RESET_ALL}"
@@ -1229,14 +1282,14 @@ class PharosTestnet:
                 f"{Fore.RED+Style.BRIGHT} Perform On-Chain Failed {Style.RESET_ALL}"
             )
 
-    async def process_perform_unwrapped(self, account: str, address: str, wrap_amount: float):
-        tx_hash, block_number = await self.perform_unwrapped(account, address, wrap_amount)
+    async def process_perform_unwrapped(self, account: str, address: str):
+        tx_hash, block_number = await self.perform_unwrapped(account, address)
         if tx_hash and block_number:
             explorer = f"https://testnet.pharosscan.xyz/tx/{tx_hash}"
 
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
-                f"{Fore.GREEN+Style.BRIGHT} Unwrapped {wrap_amount} WPHRS to PHRS Success {Style.RESET_ALL}"
+                f"{Fore.GREEN+Style.BRIGHT} Unwrapped {self.wrap_amount} WPHRS to PHRS Success {Style.RESET_ALL}"
             )
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}     Block   :{Style.RESET_ALL}"
@@ -1256,9 +1309,7 @@ class PharosTestnet:
                 f"{Fore.RED+Style.BRIGHT} Perform On-Chain Failed {Style.RESET_ALL}"
             )
 
-    async def process_perform_add_liquidity(self, account: str, address: str, token: str, contract_address_1: str, contract_address_2: str, amount_1: float, amount_2: float, token_1: str, token_2: str, use_proxy: bool):
-        proxy = self.get_next_proxy_for_account(address) if use_proxy else None
-
+    async def process_perform_add_liquidity(self, account: str, address: str, contract_address_1: str, contract_address_2: str, amount_1: float, amount_2: float, token_1: str, token_2: str):
         tx_hash, block_number = await self.perform_add_liquidity(account, address, contract_address_1, contract_address_2, amount_1, amount_2)
         if tx_hash and block_number:
             explorer = f"https://testnet.pharosscan.xyz/tx/{tx_hash}"
@@ -1285,9 +1336,7 @@ class PharosTestnet:
                 f"{Fore.RED+Style.BRIGHT} Perform On-Chain Failed {Style.RESET_ALL}"
             )
 
-    async def process_perform_swap(self, account: str, address: str, token: str, from_contract_address: str, to_contract_address: str, from_token: str, to_token: str, swap_amount: float, use_proxy: bool):
-        proxy = self.get_next_proxy_for_account(address) if use_proxy else None
-
+    async def process_perform_swap(self, account: str, address: str, from_contract_address: str, to_contract_address: str, from_token: str, to_token: str, swap_amount: float):
         tx_hash, block_number = await self.perform_swap(account, address, from_contract_address, to_contract_address, swap_amount)
         if tx_hash and block_number:
             explorer = f"https://testnet.pharosscan.xyz/tx/{tx_hash}"
@@ -1314,11 +1363,11 @@ class PharosTestnet:
                 f"{Fore.RED+Style.BRIGHT} Perform On-Chain Failed {Style.RESET_ALL}"
             )
 
-    async def process_option_1(self, account: str, address: str, token: str, mint: bool, use_proxy: bool):
+    async def process_option_1(self, address: str, use_proxy: bool):
         proxy = self.get_next_proxy_for_account(address) if use_proxy else None
 
         points = "N/A"
-        profile = await self.user_profile(address, token, proxy)
+        profile = await self.user_profile(address, proxy)
         if profile and profile.get("msg") == "ok":
             points = profile.get("data", {}).get("user_info", {}).get("TotalPoints", 0)
 
@@ -1327,7 +1376,7 @@ class PharosTestnet:
             f"{Fore.WHITE+Style.BRIGHT} {points} PTS {Style.RESET_ALL}"
         )
 
-        sign_in = await self.sign_in(address, token, proxy)
+        sign_in = await self.sign_in(address, proxy)
         if sign_in and sign_in.get("msg") == "ok":
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}Check-In  :{Style.RESET_ALL}"
@@ -1344,41 +1393,35 @@ class PharosTestnet:
                 f"{Fore.RED+Style.BRIGHT} Not Claimed {Style.RESET_ALL}"
             )
 
-        self.log(f"{Fore.CYAN+Style.BRIGHT}Faucets   :{Style.RESET_ALL}")
-
-        faucet_status = await self.phrs_faucet_status(address, token, proxy)
+        faucet_status = await self.faucet_status(address, proxy)
         if faucet_status and faucet_status.get("msg") == "ok":
             is_able = faucet_status.get("data", {}).get("is_able_to_faucet", False)
 
             if is_able:
-                claim = await self.claim_faucet(address, token, proxy)
+                claim = await self.claim_faucet(address, proxy)
                 if claim and claim.get("msg") == "ok":
                     self.log(
-                        f"{Fore.MAGENTA+Style.BRIGHT}   ● {Style.RESET_ALL}"
-                        f"{Fore.CYAN+Style.BRIGHT}PHAROS  :{Style.RESET_ALL}"
+                        f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}"
                         f"{Fore.WHITE+Style.BRIGHT} 0.2 PHRS {Style.RESET_ALL}"
                         f"{Fore.GREEN+Style.BRIGHT}Claimed Successfully{Style.RESET_ALL}"
                     )
                 elif claim and claim.get("msg") == "user has not bound X account":
                     self.log(
-                        f"{Fore.MAGENTA+Style.BRIGHT}   ● {Style.RESET_ALL}"
-                        f"{Fore.CYAN+Style.BRIGHT}PHAROS  :{Style.RESET_ALL}"
+                        f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}"
                         f"{Fore.RED+Style.BRIGHT} Not Eligible to Claim {Style.RESET_ALL}"
                         f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
                         f"{Fore.YELLOW+Style.BRIGHT} Bind X Account First {Style.RESET_ALL}"
                     )
                 else:
                     self.log(
-                        f"{Fore.MAGENTA+Style.BRIGHT}   ● {Style.RESET_ALL}"
-                        f"{Fore.CYAN+Style.BRIGHT}PHAROS  :{Style.RESET_ALL}"
+                        f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}"
                         f"{Fore.RED+Style.BRIGHT} Not Claimed {Style.RESET_ALL}"
                     )
             else:
                 faucet_available_ts = faucet_status.get("data", {}).get("avaliable_timestamp", None)
                 faucet_available_wib = datetime.fromtimestamp(faucet_available_ts).astimezone(wib).strftime('%x %X %Z')
                 self.log(
-                    f"{Fore.MAGENTA+Style.BRIGHT}   ● {Style.RESET_ALL}"
-                    f"{Fore.CYAN+Style.BRIGHT}PHAROS  :{Style.RESET_ALL}"
+                    f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}"
                     f"{Fore.YELLOW+Style.BRIGHT} Already Claimed {Style.RESET_ALL}"
                     f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
                     f"{Fore.CYAN+Style.BRIGHT} Available at: {Style.RESET_ALL}"
@@ -1386,34 +1429,15 @@ class PharosTestnet:
                 )
         else:
             self.log(
-                f"{Fore.MAGENTA+Style.BRIGHT}   ● {Style.RESET_ALL}"
-                f"{Fore.CYAN+Style.BRIGHT}PHAROS  :{Style.RESET_ALL}"
+                f"{Fore.CYAN+Style.BRIGHT}Faucet    :{Style.RESET_ALL}"
                 f"{Fore.RED+Style.BRIGHT} GET Eligibility Status Failed {Style.RESET_ALL}"
             )
 
-        for token_name in ["USDC", "USDT"]:
-            asset_address = self.USDC_CONTRACT_ADDRESS if token_name == "USDC" else self.USDT_CONTRACT_ADDRESS
-
-            if mint:
-                self.log(
-                    f"{Fore.MAGENTA+Style.BRIGHT}   ● {Style.RESET_ALL}"
-                    f"{Fore.CYAN+Style.BRIGHT}{token_name}    :{Style.RESET_ALL}                       "
-                )
-                await self.process_perform_mint_faucet(account, address, asset_address, token_name)
-                await self.print_timer(5, 10)
-
-            else:
-                self.log(
-                    f"{Fore.MAGENTA+Style.BRIGHT}   ● {Style.RESET_ALL}"
-                    f"{Fore.CYAN+Style.BRIGHT}{token_name}    :{Style.RESET_ALL}"
-                    f"{Fore.YELLOW+Style.BRIGHT} Skipped {Style.RESET_ALL}"
-                )
-
-    async def process_option_2(self, account: str, address: str, token: str, tx_count: int, tx_amount: float, use_proxy: bool):
+    async def process_option_2(self, account: str, address: str, use_proxy: bool):
         self.log(f"{Fore.CYAN+Style.BRIGHT}Transfer  :{Style.RESET_ALL}                       ")
         await asyncio.sleep(5)
 
-        for i in range(tx_count):
+        for i in range(self.tx_count):
             self.log(
                 f"{Fore.MAGENTA+Style.BRIGHT}   ● {Style.RESET_ALL}"
                 f"{Fore.GREEN+Style.BRIGHT}Tx - {i+1}{Style.RESET_ALL}                       "
@@ -1428,25 +1452,25 @@ class PharosTestnet:
             )
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}     Amount  :{Style.RESET_ALL}"
-                f"{Fore.WHITE+Style.BRIGHT} {tx_amount} PHRS {Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT} {self.tx_amount} PHRS {Style.RESET_ALL}"
             )
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}     Receiver:{Style.RESET_ALL}"
                 f"{Fore.WHITE+Style.BRIGHT} {receiver} {Style.RESET_ALL}"
             )
 
-            if not balance or balance <= tx_amount:
+            if not balance or balance <= self.tx_amount:
                 self.log(
                     f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
                     f"{Fore.YELLOW+Style.BRIGHT} Insufficient PHRS Token Balance {Style.RESET_ALL}"
                 )
                 break
 
-            await self.process_perform_transfer(account, address, token, receiver, tx_amount, use_proxy)
-            await self.print_timer(5, 10)
+            await self.process_perform_transfer(account, address, receiver, use_proxy)
+            await self.print_timer()
 
-    async def process_option_3(self, account: str, address: str, wrap_option: int, wrap_amount: float):
-        if wrap_option == 1:
+    async def process_option_3(self, account: str, address: str):
+        if self.wrap_option == 1:
             self.log(f"{Fore.CYAN+Style.BRIGHT}Wrapped   :{Style.RESET_ALL}                      ")
 
             balance = await self.get_token_balance(address, "PHRS")
@@ -1456,19 +1480,19 @@ class PharosTestnet:
             )
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}     Amount  :{Style.RESET_ALL}"
-                f"{Fore.WHITE+Style.BRIGHT} {wrap_amount} PHRS {Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT} {self.wrap_amount} PHRS {Style.RESET_ALL}"
             )
 
-            if not balance or balance <=  wrap_amount:
+            if not balance or balance <=  self.wrap_amount:
                 self.log(
                     f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
                     f"{Fore.YELLOW+Style.BRIGHT} Insufficient PHRS Token Balance {Style.RESET_ALL}"
                 )
                 return
             
-            await self.process_perform_wrapped(account, address, wrap_amount)
+            await self.process_perform_wrapped(account, address)
         
-        elif wrap_option == 2:
+        elif self.wrap_option == 2:
             self.log(f"{Fore.CYAN+Style.BRIGHT}Unwrapped :{Style.RESET_ALL}                      ")
 
             balance = await self.get_token_balance(address, self.WPHRS_CONTRACT_ADDRESS)
@@ -1478,26 +1502,26 @@ class PharosTestnet:
             )
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}     Amount  :{Style.RESET_ALL}"
-                f"{Fore.WHITE+Style.BRIGHT} {wrap_amount} WPHRS {Style.RESET_ALL}"
+                f"{Fore.WHITE+Style.BRIGHT} {self.wrap_amount} WPHRS {Style.RESET_ALL}"
             )
 
-            if not balance or balance <=  wrap_amount:
+            if not balance or balance <=  self.wrap_amount:
                 self.log(
                     f"{Fore.CYAN+Style.BRIGHT}     Status  :{Style.RESET_ALL}"
                     f"{Fore.YELLOW+Style.BRIGHT} Insufficient WPHRS Token Balance {Style.RESET_ALL}"
                 )
                 return
             
-            await self.process_perform_unwrapped(account, address, wrap_amount)
+            await self.process_perform_unwrapped(account, address)
 
-    async def process_option_4(self, account: str, address: str, token: str, add_lp_count: int, use_proxy: bool):
+    async def process_option_4(self, account: str, address: str):
         self.log(f"{Fore.CYAN+Style.BRIGHT}Liquidity :{Style.RESET_ALL}                       ")
 
-        for i in range(add_lp_count):
+        for i in range(self.add_lp_count):
             self.log(
                 f"{Fore.MAGENTA+Style.BRIGHT}   ● {Style.RESET_ALL}"
                 f"{Fore.GREEN+Style.BRIGHT}Add Liquidity{Style.RESET_ALL}"
-                f"{Fore.WHITE+Style.BRIGHT} {i+1} / {add_lp_count} {Style.RESET_ALL}                           "
+                f"{Fore.WHITE+Style.BRIGHT} {i+1} / {self.add_lp_count} {Style.RESET_ALL}                           "
             )
 
             contract_address_1 = self.WPHRS_CONTRACT_ADDRESS
@@ -1549,20 +1573,20 @@ class PharosTestnet:
                 )
                 break
 
-            await self.process_perform_add_liquidity(account, address, token, contract_address_1, contract_address_2, amount_1, amount_2, token_1, token_2, use_proxy)
-            await self.print_timer(15, 20)
+            await self.process_perform_add_liquidity(account, address, contract_address_1, contract_address_2, amount_1, amount_2, token_1, token_2)
+            await self.print_timer()
 
-    async def process_option_5(self, account: str, address: str, token: str, swap_count: int, wphrs_amount: float, usdc_amount: float, usdt_amount: float, use_proxy: bool):
+    async def process_option_5(self, account: str, address: str):
         self.log(f"{Fore.CYAN+Style.BRIGHT}Swap      :{Style.RESET_ALL}                       ")
 
-        for i in range(swap_count):
+        for i in range(self.swap_count):
             self.log(
                 f"{Fore.MAGENTA+Style.BRIGHT}   ● {Style.RESET_ALL}"
                 f"{Fore.GREEN+Style.BRIGHT}Swap{Style.RESET_ALL}"
-                f"{Fore.WHITE+Style.BRIGHT} {i+1} / {swap_count} {Style.RESET_ALL}                           "
+                f"{Fore.WHITE+Style.BRIGHT} {i+1} / {self.swap_count} {Style.RESET_ALL}                           "
             )
 
-            from_contract_address, to_contract_address, from_token, to_token, swap_amount = self.generate_swap_option(wphrs_amount, usdc_amount, usdt_amount)
+            from_contract_address, to_contract_address, from_token, to_token, swap_amount = self.generate_swap_option()
 
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}     Type    :{Style.RESET_ALL}"
@@ -1588,87 +1612,85 @@ class PharosTestnet:
                 )
                 continue
 
-            await self.process_perform_swap(account, address, token, from_contract_address, to_contract_address, from_token, to_token, swap_amount, use_proxy)
-            await self.print_timer(15, 20)
+            await self.process_perform_swap(account, address, from_contract_address, to_contract_address, from_token, to_token, swap_amount)
+            await self.print_timer()
 
-    async def process_accounts(self, account: str, address: str, option: int, mint: bool, tx_count: int, tx_amount: float, wrap_option: int, wrap_amount: float, add_lp_count: int, swap_count: int, wphrs_amount: float, usdc_amount: float, usdt_amount: float, use_proxy: bool, rotate_proxy: bool):
-        is_valid = await self.process_check_connection(address, use_proxy, rotate_proxy)
-        if is_valid:
-            token = await self.process_user_login(address, use_proxy)
-            if token:
+    async def process_accounts(self, account: str, address: str, option: int, use_proxy: bool, rotate_proxy: bool):
+        logined = await self.process_user_login(address, use_proxy, rotate_proxy)
+        if logined:
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}Status    :{Style.RESET_ALL}"
+                f"{Fore.GREEN+Style.BRIGHT} Login Success {Style.RESET_ALL}"
+            )
+
+            if option == 1:
                 self.log(
-                    f"{Fore.CYAN+Style.BRIGHT}Status    :{Style.RESET_ALL}"
-                    f"{Fore.GREEN+Style.BRIGHT} Login Success {Style.RESET_ALL}"
+                    f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
+                    f"{Fore.BLUE+Style.BRIGHT} Check-In - Claim PHRS Faucet {Style.RESET_ALL}"
                 )
 
-                if option == 1:
-                    self.log(
-                        f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
-                        f"{Fore.BLUE+Style.BRIGHT} Check-In - Claim n Mint Faucet {Style.RESET_ALL}"
-                    )
+                await self.process_option_1(address, use_proxy)
 
-                    await self.process_option_1(account, address, token, mint, use_proxy)
+            elif option == 2:
+                self.log(
+                    f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
+                    f"{Fore.BLUE+Style.BRIGHT} Send To Friends {Style.RESET_ALL}"
+                )
 
-                elif option == 2:
-                    self.log(
-                        f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
-                        f"{Fore.BLUE+Style.BRIGHT} Send To Friends {Style.RESET_ALL}"
-                    )
+                await self.process_option_2(account, address, use_proxy)
 
-                    await self.process_option_2(account, address, token, tx_count, tx_amount, use_proxy)
+            elif option == 3:
+                wrap_type = "Wrap PHRS to WPHRS" if self.wrap_amount == 1 else "Unwrap WPHRS to PHRS"
+                self.log(
+                    f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
+                    f"{Fore.BLUE+Style.BRIGHT} {wrap_type} {Style.RESET_ALL}"
+                )
+                
+                await self.process_option_3(account, address)
 
-                elif option == 3:
-                    wrap_type = "Wrap PHRS to WPHRS" if wrap_option == 1 else "Unwrap WPHRS to PHRS"
-                    self.log(
-                        f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
-                        f"{Fore.BLUE+Style.BRIGHT} {wrap_type} {Style.RESET_ALL}"
-                    )
-                    
-                    await self.process_option_3(account, address, wrap_option, wrap_amount)
+            elif option == 4:
+                self.log(
+                    f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
+                    f"{Fore.BLUE+Style.BRIGHT} Add Liquidity Pool {Style.RESET_ALL}"
+                )
 
-                elif option == 4:
-                    self.log(
-                        f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
-                        f"{Fore.BLUE+Style.BRIGHT} Add Liquidity Pool {Style.RESET_ALL}"
-                    )
+                await self.process_option_4(account, address)
 
-                    await self.process_option_4(account, address, token, add_lp_count, use_proxy)
+            elif option == 5:
+                self.log(
+                    f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
+                    f"{Fore.BLUE+Style.BRIGHT} Swap WPHRS - USDC - USDT  {Style.RESET_ALL}"
+                )
 
-                elif option == 5:
-                    self.log(
-                        f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
-                        f"{Fore.BLUE+Style.BRIGHT} Swap WPHRS - USDC - USDT  {Style.RESET_ALL}"
-                    )
+                await self.process_option_5(account, address)
 
-                    await self.process_option_5(account, address, token, swap_count, wphrs_amount, usdc_amount, usdt_amount, use_proxy)
+            else:
+                self.log(
+                    f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
+                    f"{Fore.BLUE+Style.BRIGHT} Run All Features {Style.RESET_ALL}"
+                )
 
-                else:
-                    self.log(
-                        f"{Fore.CYAN+Style.BRIGHT}Option    :{Style.RESET_ALL}"
-                        f"{Fore.BLUE+Style.BRIGHT} Run All Features {Style.RESET_ALL}"
-                    )
+                await self.process_option_1(address, use_proxy)
+                await asyncio.sleep(5)
 
-                    await self.process_option_1(account, address, token, mint, use_proxy)
-                    await asyncio.sleep(5)
+                await self.process_option_2(account, address, use_proxy)
+                await asyncio.sleep(5)
 
-                    await self.process_option_2(account, address, token, tx_count, tx_amount, use_proxy)
-                    await asyncio.sleep(5)
+                await self.process_option_3(account, address)
+                await asyncio.sleep(5)
+                
+                await self.process_option_4(account, address)
+                await asyncio.sleep(5)
 
-                    await self.process_option_3(account, address, wrap_option, wrap_amount)
-                    await asyncio.sleep(5)
-                    
-                    await self.process_option_4(account, address, token, add_lp_count, use_proxy)
-                    await asyncio.sleep(5)
-
-                    await self.process_option_5(account, address, token, swap_count, wphrs_amount, usdc_amount, usdt_amount, use_proxy)
-                    await asyncio.sleep(5)
+                await self.process_option_5(account, address)
+                await asyncio.sleep(5)
 
     async def main(self):
         try:
             with open('accounts.txt', 'r') as file:
                 accounts = [line.strip() for line in file if line.strip()]
             
-            option, mint, tx_count, tx_amount, wrap_option, wrap_amount, add_lp_count, swap_count, wphrs_amount, usdc_amount, usdt_amount, use_proxy_choice, rotate_proxy = self.print_question()
+            option, use_proxy_choice, rotate_proxy = self.print_question()
 
             while True:
                 use_proxy = False
@@ -1700,7 +1722,7 @@ class PharosTestnet:
                         if address and signature:
                             self.signatures[address] = signature
 
-                            await self.process_accounts(account, address, option, mint, tx_count, tx_amount, wrap_option, wrap_amount, add_lp_count, swap_count, wphrs_amount, usdc_amount, usdt_amount, use_proxy, rotate_proxy)
+                            await self.process_accounts(account, address, option, use_proxy, rotate_proxy)
                             await asyncio.sleep(3)
 
                 self.log(f"{Fore.CYAN + Style.BRIGHT}={Style.RESET_ALL}"*72)
