@@ -202,7 +202,29 @@ class PharosTestnet:
             
             return address
         except Exception as e:
-            raise Exception(f"Generate Addres From Private Key Failed: {str(e)}")
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}Status    :{Style.RESET_ALL}"
+                f"{Fore.RED+Style.BRIGHT} Generate Address Failed {Style.RESET_ALL}"
+                f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+                f"{Fore.YELLOW+Style.BRIGHT} {str(e)} {Style.RESET_ALL}                  "
+            )
+            return None
+        
+    def generate_signature(self, account: str):
+        try:
+            encoded_message = encode_defunct(text="pharos")
+            signed_message = Account.sign_message(encoded_message, private_key=account)
+            signature = to_hex(signed_message.signature)
+
+            return signature
+        except Exception as e:
+            self.log(
+                f"{Fore.CYAN+Style.BRIGHT}Status    :{Style.RESET_ALL}"
+                f"{Fore.RED+Style.BRIGHT} Generate Signature Failed {Style.RESET_ALL}"
+                f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
+                f"{Fore.YELLOW+Style.BRIGHT} {str(e)} {Style.RESET_ALL}                  "
+            )
+            return None
         
     def generate_random_receiver(self):
         try:
@@ -214,16 +236,6 @@ class PharosTestnet:
             return receiver
         except Exception as e:
             return None
-        
-    def generate_signature(self, account: str):
-        try:
-            encoded_message = encode_defunct(text="pharos")
-            signed_message = Account.sign_message(encoded_message, private_key=account)
-            signature = to_hex(signed_message.signature)
-
-            return signature
-        except Exception as e:
-            raise Exception(f"Generate Signature From Private Key Failed: {str(e)}")
         
     def generate_swap_option(self):
         swap_option = random.choice([
@@ -1011,12 +1023,15 @@ class PharosTestnet:
                 async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
                     async with session.post(url=url, headers=headers) as response:
                         response.raise_for_status()
-                        result = await response.json()
-                        return result["data"]["jwt"]
+                        return await response.json()
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
                     await asyncio.sleep(5)
                     continue
+                self.log(
+                    f"{Fore.CYAN+Style.BRIGHT}Message   :{Style.RESET_ALL}"
+                    f"{Fore.RED+Style.BRIGHT} {str(e)} {Style.RESET_ALL}"
+                )
                 return None
     
     async def user_profile(self, address: str, proxy=None, retries=5):
@@ -1147,14 +1162,10 @@ class PharosTestnet:
                 return None
             
     async def process_user_login(self, address: str, use_proxy: bool, rotate_proxy: bool):
-        message = "Checking Connection, Wait..."
-        if use_proxy:
-            message = "Checking Proxy Connection, Wait..."
-
         print(
             f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
             f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
-            f"{Fore.YELLOW + Style.BRIGHT}{message}{Style.RESET_ALL}",
+            f"{Fore.YELLOW + Style.BRIGHT}Try to Login, Wait...{Style.RESET_ALL}",
             end="\r",
             flush=True
         )
@@ -1163,49 +1174,49 @@ class PharosTestnet:
 
         if rotate_proxy:
             while True:
-                token = self.user_login(address, proxy)
-                if not token:
+                login = await self.user_login(address, proxy)
+                if login and login.get("code") == 0:
                     self.log(
                         f"{Fore.CYAN+Style.BRIGHT}Proxy     :{Style.RESET_ALL}"
                         f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
                         f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
-                        f"{Fore.RED+Style.BRIGHT} Not 200 OK, {Style.RESET_ALL}"
-                        f"{Fore.YELLOW+Style.BRIGHT}Rotating Proxy...{Style.RESET_ALL}"
+                        f"{Fore.GREEN+Style.BRIGHT} Login Success {Style.RESET_ALL}                  "
                     )
-                    proxy = self.rotate_proxy_for_account(address) if use_proxy else None
-                    await asyncio.sleep(5)
-                    continue
-
-                self.access_tokens[address] = token
+                
+                    self.access_tokens[address] = login["data"]["jwt"]
+                    return True
 
                 self.log(
                     f"{Fore.CYAN+Style.BRIGHT}Proxy     :{Style.RESET_ALL}"
                     f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
                     f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
-                    f"{Fore.GREEN+Style.BRIGHT} 200 OK {Style.RESET_ALL}                  "
+                    f"{Fore.RED+Style.BRIGHT} Login Failed, {Style.RESET_ALL}"
+                    f"{Fore.YELLOW+Style.BRIGHT}Rotating Proxy...{Style.RESET_ALL}"
                 )
-                return True
+                proxy = self.rotate_proxy_for_account(address) if use_proxy else None
+                await asyncio.sleep(5)
+                continue
 
-        token = await self.user_login(address, proxy)
-        if not token:
+        login = await self.user_login(address, proxy)
+        if login and login.get("code") == 0:
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}Proxy     :{Style.RESET_ALL}"
                 f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
                 f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
-                f"{Fore.RED+Style.BRIGHT} Not 200 OK, {Style.RESET_ALL}"
-                f"{Fore.YELLOW+Style.BRIGHT}Skipping This Account{Style.RESET_ALL}"
+                f"{Fore.GREEN+Style.BRIGHT} Login Success {Style.RESET_ALL}                  "
             )
-            return False
-        
-        self.access_tokens[address] = token
-        
+            
+            self.access_tokens[address] = login["data"]["jwt"]
+            return True
+
         self.log(
             f"{Fore.CYAN+Style.BRIGHT}Proxy     :{Style.RESET_ALL}"
             f"{Fore.WHITE+Style.BRIGHT} {proxy} {Style.RESET_ALL}"
             f"{Fore.MAGENTA+Style.BRIGHT}-{Style.RESET_ALL}"
-            f"{Fore.GREEN+Style.BRIGHT} 200 OK {Style.RESET_ALL}                  "
+            f"{Fore.RED+Style.BRIGHT} Login Failed, {Style.RESET_ALL}"
+            f"{Fore.YELLOW+Style.BRIGHT}Skipping This Account{Style.RESET_ALL}"
         )
-        return True
+        return False
     
     async def process_perform_transfer(self, account: str, address: str, receiver: str, use_proxy: bool):
         proxy = self.get_next_proxy_for_account(address) if use_proxy else None
@@ -1618,10 +1629,6 @@ class PharosTestnet:
     async def process_accounts(self, account: str, address: str, option: int, use_proxy: bool, rotate_proxy: bool):
         logined = await self.process_user_login(address, use_proxy, rotate_proxy)
         if logined:
-            self.log(
-                f"{Fore.CYAN+Style.BRIGHT}Status    :{Style.RESET_ALL}"
-                f"{Fore.GREEN+Style.BRIGHT} Login Success {Style.RESET_ALL}"
-            )
 
             if option == 1:
                 self.log(
@@ -1719,11 +1726,13 @@ class PharosTestnet:
                             f"{Fore.CYAN + Style.BRIGHT}]{separator}{Style.RESET_ALL}"
                         )
 
-                        if address and signature:
-                            self.signatures[address] = signature
+                        if not address or not signature:
+                            continue
 
-                            await self.process_accounts(account, address, option, use_proxy, rotate_proxy)
-                            await asyncio.sleep(3)
+                        self.signatures[address] = signature
+
+                        await self.process_accounts(account, address, option, use_proxy, rotate_proxy)
+                        await asyncio.sleep(3)
 
                 self.log(f"{Fore.CYAN + Style.BRIGHT}={Style.RESET_ALL}"*72)
                 seconds = 24 * 60 * 60
