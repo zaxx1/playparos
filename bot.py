@@ -1539,7 +1539,7 @@ class PharosTestnet:
             amount_1 = 0.001
             token_1 = "WPHRS"
 
-            contract_address_2 = random.choice([self.USDC_CONTRACT_ADDRESS])
+            contract_address_2 = random.choice([self.USDC_CONTRACT_ADDRESS, self.USDT_CONTRACT_ADDRESS])
             amount_2 = 0.15 if contract_address_2 == self.USDC_CONTRACT_ADDRESS else 3.55
             token_2 = "USDC" if contract_address_2 == self.USDC_CONTRACT_ADDRESS else "USDT"
 
