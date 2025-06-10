@@ -146,18 +146,18 @@ class PharosTestnet:
         try:
             if use_proxy_choice == 1:
                 async with ClientSession(timeout=ClientTimeout(total=30)) as session:
-                    async with session.get("https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt") as response:
+                    async with session.get("https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text") as response:
                         response.raise_for_status()
                         content = await response.text()
                         with open(filename, 'w') as f:
                             f.write(content)
-                        self.proxies = content.splitlines()
+                        self.proxies = [line.strip() for line in content.splitlines() if line.strip()]
             else:
                 if not os.path.exists(filename):
                     self.log(f"{Fore.RED + Style.BRIGHT}File {filename} Not Found.{Style.RESET_ALL}")
                     return
                 with open(filename, 'r') as f:
-                    self.proxies = f.read().splitlines()
+                    self.proxies = [line.strip() for line in f.read().splitlines() if line.strip()]
             
             if not self.proxies:
                 self.log(f"{Fore.RED + Style.BRIGHT}No Proxies Found.{Style.RESET_ALL}")
@@ -979,18 +979,18 @@ class PharosTestnet:
         
         while True:
             try:
-                print(f"{Fore.WHITE + Style.BRIGHT}1. Run With Monosans Proxy{Style.RESET_ALL}")
+                print(f"{Fore.WHITE + Style.BRIGHT}1. Run With Free Proxyscrape Proxy{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}2. Run With Private Proxy{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}3. Run Without Proxy{Style.RESET_ALL}")
                 choose = int(input(f"{Fore.BLUE + Style.BRIGHT}Choose [1/2/3] -> {Style.RESET_ALL}").strip())
 
                 if choose in [1, 2, 3]:
                     proxy_type = (
-                        "Run With Monosans Proxy" if choose == 1 else 
-                        "Run With Private Proxy" if choose == 2 else 
-                        "Run Without Proxy"
+                        "With Free Proxyscrape" if choose == 1 else 
+                        "With Private" if choose == 2 else 
+                        "Without"
                     )
-                    print(f"{Fore.GREEN + Style.BRIGHT}{proxy_type} Selected.{Style.RESET_ALL}")
+                    print(f"{Fore.GREEN + Style.BRIGHT}Run {proxy_type} Proxy Selected.{Style.RESET_ALL}")
                     break
                 else:
                     print(f"{Fore.RED + Style.BRIGHT}Please enter either 1, 2 or 3.{Style.RESET_ALL}")
