@@ -8,18 +8,17 @@ Pharos Testnet BOT
 ## Features
 
   - Auto Get Account Information
-  - Auto Run With [Monosans](https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt) Proxy - `Choose 1`
+  - Auto Run With [Proxyscrape Free Proxy](https://proxyscrape.com/free-proxy-list) - `Choose 1`
   - Auto Run With Private Proxy - `Choose 2`
   - Auto Run Without Proxy - `Choose 3`
   - Auto Rotate Invalid Proxies - `y` or `n`
   - Auto Claim Daily Check-In
-  - Auto Claim Faucet
+  - Auto Claim Faucet PHRS - USDC - USDT
   - Auto Make Transfer to Random Address
   - Auto Wrapped - Unwrapped PHRS/WPHRS
-  - Auto Swap WPHRS to USDC - USDC to WPHRS
+  - Auto Add LP WPHRS/USDC - WPHRS/USDT
+  - Auto Swap WPHRS - USDC - USDT
   - Multi Accounts
-
-### Note: Other features will be update soon.
 
 ## Requiremnets
 
@@ -39,6 +38,20 @@ Pharos Testnet BOT
    ```bash
    pip install -r requirements.txt #or pip3 install -r requirements.txt
    ```
+
+### Note: Check your web3, eth-account, eth-utils, and eth-abi library version first. If not same with version in requirements.txt, u must uninstall that library.
+- **Check Library Version**
+  ```bash
+    pip show libary_name
+  ```
+- **Uninstall Library**
+  ```bash
+    pip uninstall libary_name
+  ```
+- **Install Library With Version**
+  ```bash
+    pip install libary_name==version
+  ```
 
 ## Configuration
 
