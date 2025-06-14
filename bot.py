@@ -669,7 +669,7 @@ class PharosTestnet:
                 print(f"{Fore.WHITE + Style.BRIGHT}4. Add Liquidity Pool{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}5. Swap WPHRS - USDC - USDT{Style.RESET_ALL}")
                 print(f"{Fore.WHITE + Style.BRIGHT}6. Run All Features{Style.RESET_ALL}")
-                option = int(input(f"{Fore.BLUE + Style.BRIGHT}Choose [1/2/3/4] -> {Style.RESET_ALL}").strip())
+                option = int(input(f"{Fore.BLUE + Style.BRIGHT}Choose [1/2/3/4/5/6] -> {Style.RESET_ALL}").strip())
 
                 if option in [1, 2, 3, 4, 5, 6]:
                     option_type = (
