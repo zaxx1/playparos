@@ -280,6 +280,33 @@ class PharosTestnet:
         )
 
         return from_token, to_token, from_ticker, to_ticker, swap_amount
+    
+    def generate_add_lp_option(self):
+        add_lp_option = random.choice(["USDCnWPHRS", "USDCnUSDT", "WPHRSnUSDT"])
+
+        if add_lp_option == "USDCnWPHRS":
+            token0 = self.USDC_CONTRACT_ADDRESS
+            token1 = self.WPHRS_CONTRACT_ADDRESS
+            amount0 = 0.45
+            amount1 = 0.001
+            ticker0 = "USDC"
+            ticker1 = "WPHRS"
+        elif add_lp_option == "USDCnUSDT":
+            token0 = self.USDC_CONTRACT_ADDRESS
+            token1 = self.USDT_CONTRACT_ADDRESS
+            amount0 = 1
+            amount1 = 1
+            ticker0 = "USDC"
+            ticker1 = "USDT"
+        else:
+            token0 = self.WPHRS_CONTRACT_ADDRESS
+            token1 = self.USDT_CONTRACT_ADDRESS
+            amount0 = 0.001
+            amount1 = 0.45
+            ticker0 = "WPHRS"
+            ticker1 = "USDT"
+
+        return add_lp_option, token0, token1, amount0, amount1, ticker0, ticker1
         
     async def get_web3_with_check(self, address: str, use_proxy: bool, retries=3, timeout=60):
         request_kwargs = {"timeout": timeout}
@@ -485,15 +512,18 @@ class PharosTestnet:
             return True
         except Exception as e:
             raise Exception(f"Approving Token Contract Failed: {str(e)}")
-        
-    async def perform_add_liquidity(self, account: str, address: str, token0: str, token1: str, amount0: float, amount1: float, use_proxy: bool):
+
+    async def perform_add_liquidity(self, account: str, address: str, add_lp_option: str, token0: str, token1: str, amount0: float, amount1: float, use_proxy: bool):
         try:
             web3 = await self.get_web3_with_check(address, use_proxy)
 
-            await self.approving_token(account, address, self.POTITION_MANAGER_ADDRESS, token0, amount0, use_proxy)
-            await self.approving_token(account, address, self.POTITION_MANAGER_ADDRESS, token1, amount1, use_proxy)
-
-            token_contract = web3.eth.contract(address=web3.to_checksum_address(self.POTITION_MANAGER_ADDRESS), abi=self.ADD_LP_CONTRACT_ABI)
+            if add_lp_option == "USDCnWPHRS":
+                await self.approving_token(account, address, self.POTITION_MANAGER_ADDRESS, token0, amount0, use_proxy)
+            if add_lp_option == "WPHRSnUSDT":
+                await self.approving_token(account, address, self.POTITION_MANAGER_ADDRESS, token1, amount1, use_proxy)
+            else:
+                await self.approving_token(account, address, self.POTITION_MANAGER_ADDRESS, token0, amount0, use_proxy)
+                await self.approving_token(account, address, self.POTITION_MANAGER_ADDRESS, token1, amount1, use_proxy)
             
             token0_contract = web3.eth.contract(address=web3.to_checksum_address(token0), abi=self.ERC20_CONTRACT_ABI)
             token0_decimals = token0_contract.functions.decimals().call()
@@ -507,15 +537,17 @@ class PharosTestnet:
                 "token0": web3.to_checksum_address(token0),
                 "token1": web3.to_checksum_address(token1),
                 "fee": 500,
-                "tickLower": -887220,
-                "tickUpper": 887220,
+                "tickLower": -887270,
+                "tickUpper": 887270,
                 "amount0Desired": amount0_desired,
                 "amount1Desired": amount1_desired,
                 "amount0Min": 0,
                 "amount1Min": 0,
                 "recipient": web3.to_checksum_address(address),
-                "deadline": int(time.time()) + 300
+                "deadline": int(time.time()) + 600
             }
+
+            token_contract = web3.eth.contract(address=web3.to_checksum_address(self.POTITION_MANAGER_ADDRESS), abi=self.ADD_LP_CONTRACT_ABI)
 
             lp_data = token_contract.functions.mint(mint_params)
 
@@ -1294,8 +1326,8 @@ class PharosTestnet:
                 f"{Fore.RED+Style.BRIGHT} Perform On-Chain Failed {Style.RESET_ALL}"
             )
 
-    async def process_perform_add_liquidity(self, account: str, address: str, token0: str, token1: str, amount0: float, amount1: float, ticker0: str, ticker1: str, use_proxy: bool):
-        tx_hash, block_number = await self.perform_add_liquidity(account, address, token0, token1, amount0, amount1, use_proxy)
+    async def process_perform_add_liquidity(self, account: str, address: str, add_lp_option: str, token0: str, token1: str, amount0: float, amount1: float, ticker0: str, ticker1: str, use_proxy: bool):
+        tx_hash, block_number = await self.perform_add_liquidity(account, address, add_lp_option, token0, token1, amount0, amount1, use_proxy)
         if tx_hash and block_number:
             explorer = f"https://testnet.pharosscan.xyz/tx/{tx_hash}"
 
@@ -1508,14 +1540,7 @@ class PharosTestnet:
                 f"{Fore.WHITE+Style.BRIGHT} {i+1} / {self.add_lp_count} {Style.RESET_ALL}                           "
             )
 
-            token0 = self.WPHRS_CONTRACT_ADDRESS
-            amount0 = 0.001
-            ticker0 = "WPHRS"
-
-            token1 = self.USDT_CONTRACT_ADDRESS
-            # token1 = random.choice([self.USDC_CONTRACT_ADDRESS, self.USDT_CONTRACT_ADDRESS])
-            amount1 = 0.5
-            ticker1 = "USDC" if token1 == self.USDC_CONTRACT_ADDRESS else "USDT"
+            add_lp_option, token0, token1, amount0, amount1, ticker0, ticker1 = self.generate_add_lp_option()
 
             self.log(
                 f"{Fore.CYAN+Style.BRIGHT}     Type    :{Style.RESET_ALL}"
@@ -1558,7 +1583,7 @@ class PharosTestnet:
                 )
                 break
 
-            await self.process_perform_add_liquidity(account, address, token0, token1, amount0, amount1, ticker0, ticker1, use_proxy)
+            await self.process_perform_add_liquidity(account, address, add_lp_option, token0, token1, amount0, amount1, ticker0, ticker1, use_proxy)
             await self.print_timer()
 
     async def process_option_5(self, account: str, address: str, use_proxy: bool):
